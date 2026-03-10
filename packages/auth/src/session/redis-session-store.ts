@@ -92,7 +92,19 @@ export class RedisSessionStore implements SessionStore {
       return null;
     }
 
-    return JSON.parse(payload) as AuthSession;
+    try {
+      return JSON.parse(payload) as AuthSession;
+    } catch {
+      // Malformed session payload in Redis; delete the bad key and treat as missing.
+      const key = this.#sessionKey(sessionToken);
+      this.#client
+        .del(key)
+        .catch(() => {
+          // Best-effort cleanup; ignore errors from delete.
+        });
+
+      return null;
+    }
   }
 
   async createSession(
