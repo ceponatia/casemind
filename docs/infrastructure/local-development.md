@@ -18,6 +18,10 @@ pnpm infra:status
 pnpm infra:down
 pnpm infra:reset
 pnpm infra:logs
+pnpm db:migrate:local
+pnpm db:indexes:local
+pnpm db:seed:local
+pnpm db:reset:local
 ```
 
 ## Environment contract
@@ -25,6 +29,10 @@ pnpm infra:logs
 Copy `.env.example` to `.env` and keep the variable names stable across local, CI, and future cloud deployment targets.
 
 Redis uses host port `6380` by default so the stack is less likely to collide with an existing local Redis instance. If you need a different host port, override `CASEMIND_REDIS_HOST_PORT` and keep `CASEMIND_REDIS_URL` in sync.
+
+The local database workflow is deterministic by default. `pnpm db:reset:local` reapplies the checked-in PostgreSQL migration set, recreates MongoDB indexes, and loads synthetic data for one demo tenant so later auth, audit, RBAC, and UI work can develop without live CJI.
+
+PostgreSQL migrations also provision a restricted `casemind_app` role for row-level-security verification. The current local service contract still exposes the administrative connection string for tooling, while package-level integration tests use the application role to confirm tenant isolation behavior.
 
 ## Buckets
 
