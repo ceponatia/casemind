@@ -8,5 +8,10 @@
         "vitest.workspace.ts",
         "eslint.config.mjs",
         "stryker.config.mjs"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "coverage"
     ]
 }
