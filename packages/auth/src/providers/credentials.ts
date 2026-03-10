@@ -3,10 +3,13 @@ import type {
   LoginInput,
   LoginResult,
 } from "../types.js";
-import { AuthService } from "../service/auth-service.js";
+
+interface AuthServiceLike {
+  login(input: LoginInput): Promise<LoginResult>;
+}
 
 export function createCredentialsProvider(
-  authService: AuthService,
+  authService: AuthServiceLike,
 ): CredentialsProviderDefinition {
   return {
     id: "credentials",
