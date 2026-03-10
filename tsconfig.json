@@ -1,0 +1,12 @@
+{
+    "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "composite": false
+    },
+    "include": [
+        "packages/**/*.ts",
+        "vitest.workspace.ts",
+        "eslint.config.mjs",
+        "stryker.config.mjs"
+    ]
+}

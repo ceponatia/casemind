@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"name": "casemind",
+			"path": ".",
+			"root": true
+		},
+		{
+			"name": "documents",
+			"path": "../dev-docs/casemind"
+		}
+	],
+	"settings": {}
+}

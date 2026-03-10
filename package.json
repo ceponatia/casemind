@@ -1,0 +1,41 @@
+{
+    "name": "casemind",
+    "private": true,
+    "packageManager": "pnpm@10.6.3",
+    "scripts": {
+        "infra:up": "docker compose up -d",
+        "infra:down": "docker compose down --remove-orphans",
+        "infra:reset": "docker compose down --volumes --remove-orphans",
+        "infra:logs": "docker compose logs -f",
+        "infra:status": "docker compose ps",
+        "lint": "pnpm -r --if-present lint",
+        "typecheck": "pnpm -r --if-present typecheck",
+        "test": "pnpm -r --if-present test",
+        "test:integration": "pnpm --filter @casemind/test-utils test:integration",
+        "test:mutate": "stryker run stryker.config.mjs",
+        "validate": "pnpm lint && pnpm typecheck && pnpm test"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.22.0",
+        "@stryker-mutator/core": "^8.7.1",
+        "@stryker-mutator/vitest-runner": "^8.7.1",
+        "@types/node": "^22.13.10",
+        "eslint": "^9.22.0",
+        "fast-check": "^4.0.1",
+        "globals": "^15.15.0",
+        "testcontainers": "^10.21.0",
+        "typescript": "^5.8.2",
+        "typescript-eslint": "^8.26.1",
+        "vitest": "^3.0.8"
+    },
+    "pnpm": {
+        "onlyBuiltDependencies": [
+            "esbuild"
+        ],
+        "ignoredBuiltDependencies": [
+            "cpu-features",
+            "protobufjs",
+            "ssh2"
+        ]
+    }
+}

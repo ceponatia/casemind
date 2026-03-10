@@ -1,0 +1,10 @@
+node_modules/
+coverage/
+dist/
+.stryker-tmp/
+.env
+.env.local
+.env.*.local
+*.tsbuildinfo
+.DS_Store
+dep-report.md
