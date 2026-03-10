@@ -1,14 +1,7 @@
 import type { LocalAuthConfig, SessionPolicy } from "./types.js";
+import { DEFAULT_SESSION_POLICY } from "./policy/session-policy.js";
 
 type EnvironmentMap = Record<string, string | undefined>;
-
-const DEFAULT_SESSION_POLICY: SessionPolicy = {
-  inactivityTimeoutMinutes: 30,
-  absoluteTimeoutHours: 12,
-  maxFailedAttempts: 5,
-  secureCookies: false,
-};
-
 function getDefaultEnv(): EnvironmentMap {
   return (
     (globalThis as { process?: { env?: EnvironmentMap } }).process?.env ?? {}
