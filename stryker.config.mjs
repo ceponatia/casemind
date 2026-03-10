@@ -1,11 +1,12 @@
 export default {
-  mutate: ["packages/platform-config/src/**/*.ts"],
+  mutate: ["packages/auth/src/**/*.ts"],
   plugins: ["@stryker-mutator/vitest-runner"],
   testRunner: "vitest",
   reporters: ["clear-text", "html"],
-  coverageAnalysis: "off",
+  coverageAnalysis: "perTest",
+  ignoreStatic: true,
   tempDirName: ".stryker-tmp",
   vitest: {
-    configFile: "packages/platform-config/vitest.config.ts",
+    configFile: "packages/auth/vitest.config.ts",
   },
 };

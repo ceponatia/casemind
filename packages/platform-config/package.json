@@ -6,6 +6,9 @@
     "exports": {
         ".": "./src/index.ts"
     },
+    "devDependencies": {
+        "vitest": "^3.0.8"
+    },
     "scripts": {
         "lint": "eslint src tests",
         "typecheck": "tsc -p tsconfig.json",

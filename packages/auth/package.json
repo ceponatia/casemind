@@ -1,5 +1,5 @@
 {
-    "name": "@casemind/test-utils",
+    "name": "@casemind/auth",
     "version": "0.0.0",
     "private": true,
     "type": "module",
@@ -7,9 +7,11 @@
         ".": "./src/index.ts"
     },
     "dependencies": {
-        "testcontainers": "^10.21.0"
+        "redis": "^5.8.2"
     },
     "devDependencies": {
+        "@casemind/test-utils": "workspace:*",
+        "fast-check": "^4.0.1",
         "vitest": "^3.0.8"
     },
     "scripts": {

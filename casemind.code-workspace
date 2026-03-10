@@ -10,5 +10,9 @@
 			"path": "../dev-docs/casemind"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"search.exclude": {
+			"reports/mutation/**": true
+		}
+	}
 }

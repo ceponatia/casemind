@@ -2,6 +2,7 @@ node_modules/
 coverage/
 dist/
 .stryker-tmp/
+reports/
 .env
 .env.local
 .env.*.local
