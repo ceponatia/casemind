@@ -36,6 +36,25 @@ function readRequired(
   return resolved;
 }
 
+const SESSION_SECRET_PLACEHOLDER = "casemind-local-session-secret-change-me";
+
+function readSessionSecret(
+  value: string | undefined,
+  isProduction: boolean,
+): string {
+  if (isProduction) {
+    if (!value || value.length === 0 || value === SESSION_SECRET_PLACEHOLDER) {
+      throw new Error(
+        "CASEMIND_AUTH_SESSION_SECRET must be explicitly set to a strong secret in production",
+      );
+    }
+
+    return value;
+  }
+
+  return value && value.length > 0 ? value : SESSION_SECRET_PLACEHOLDER;
+}
+
 export function getLocalAuthConfig(
   env: EnvironmentMap = getDefaultEnv(),
 ): LocalAuthConfig {
@@ -45,10 +64,9 @@ export function getLocalAuthConfig(
       "CaseMind Local",
       "CASEMIND_AUTH_ISSUER",
     ),
-    sessionSecret: readRequired(
+    sessionSecret: readSessionSecret(
       env.CASEMIND_AUTH_SESSION_SECRET,
-      "casemind-local-session-secret-change-me",
-      "CASEMIND_AUTH_SESSION_SECRET",
+      env.NODE_ENV === "production",
     ),
     sessionCookieName: readRequired(
       env.CASEMIND_AUTH_SESSION_COOKIE_NAME,

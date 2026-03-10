@@ -17,7 +17,7 @@ interface RedisSessionClient {
   quit?(): Promise<unknown>;
   get(key: string): Promise<string | null>;
   set(key: string, value: string, options?: { EX: number }): Promise<unknown>;
-  del(key: string): Promise<number>;
+  del(...keys: string[]): Promise<number>;
   sAdd(key: string, member: string): Promise<number>;
   sMembers(key: string): Promise<string[]>;
   sRem(key: string, member: string): Promise<number>;
@@ -181,11 +181,10 @@ export class RedisSessionStore implements SessionStore {
     const indexKey = this.#userIndexKey(userId);
     const sessionTokens = await this.#client.sMembers(indexKey);
 
-    for (const sessionToken of sessionTokens) {
-      await this.#client.del(this.#sessionKey(sessionToken));
-    }
+    const keysToDelete = sessionTokens.map((t) => this.#sessionKey(t));
+    keysToDelete.push(indexKey);
 
-    await this.#client.del(indexKey);
+    await this.#client.del(...keysToDelete);
     return sessionTokens.length;
   }
 
