@@ -67,10 +67,22 @@ export class RedisSessionStore implements SessionStore {
       this.#userIndexKey(session.userId),
       session.sessionToken,
     );
-    await this.#client.expire(
-      this.#userIndexKey(session.userId),
-      Math.max(ttlSeconds, this.#policy.absoluteTimeoutHours * 3600),
+
+    // Keep the user-session index key aligned with the remaining absolute
+    // lifetime of the session to avoid retaining orphaned tokens.
+    const absoluteExpiresAt = new Date(session.absoluteExpiresAt);
+    const absoluteRemainingSeconds = Math.max(
+      0,
+      Math.floor((absoluteExpiresAt.getTime() - now.getTime()) / 1000),
     );
+    const indexTtlSeconds = Math.min(ttlSeconds, absoluteRemainingSeconds);
+
+    if (indexTtlSeconds > 0) {
+      await this.#client.expire(
+        this.#userIndexKey(session.userId),
+        indexTtlSeconds,
+      );
+    }
   }
 
   async #readSession(sessionToken: string): Promise<AuthSession | null> {
