@@ -37,8 +37,5 @@
             "protobufjs",
             "ssh2"
         ]
-    },
-    "dependencies": {
-        "redis": "^5.11.0"
     }
 }
