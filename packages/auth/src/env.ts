@@ -1,4 +1,4 @@
-import type { LocalAuthConfig, SessionPolicy } from "./types.js";
+import type { LocalAuthConfig } from "./types.js";
 import { DEFAULT_SESSION_POLICY } from "./policy/session-policy.js";
 
 type EnvironmentMap = Record<string, string | undefined>;
