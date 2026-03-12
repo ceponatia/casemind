@@ -118,22 +118,7 @@ CREATE POLICY ai_interaction_placeholders_tenant_isolation ON ai_interaction_pla
   USING (tenant_id = casemind_current_tenant_id())
   WITH CHECK (tenant_id = casemind_current_tenant_id());
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'casemind_app'
-  ) THEN
-    CREATE ROLE casemind_app LOGIN PASSWORD 'casemind_app' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
-  END IF;
-END
-$$;
-
-GRANT USAGE ON SCHEMA public TO casemind_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON tenants TO casemind_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON users TO casemind_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON audit_log_entries TO casemind_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON calendar_events TO casemind_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON notifications TO casemind_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ai_interaction_placeholders TO casemind_app;
-
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO casemind_app;
+-- NOTE: Application database roles, passwords, and GRANTs for casemind_app
+-- are provisioned via infra/bootstrap (e.g., Docker init/admin scripts),
+-- not in schema migrations, to avoid hard-coded credentials and superuser
+-- requirements.
