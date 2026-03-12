@@ -70,6 +70,7 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
   RAISE EXCEPTION 'audit_log_entries is append-only';
+  RETURN NULL;
 END;
 $$;
 
