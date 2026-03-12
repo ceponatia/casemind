@@ -47,9 +47,15 @@ export interface LocalObjectStorageConfig {
   };
 }
 
+export interface LocalPostgresApplicationRoleConfig {
+  username: string;
+  password: string;
+}
+
 export interface LocalPlatformServiceContract {
   stage: DeploymentStage;
   postgresUrl: string;
+  postgresApp: LocalPostgresApplicationRoleConfig;
   mongodbUrl: string;
   redisUrl: string;
   objectStorage: LocalObjectStorageConfig;

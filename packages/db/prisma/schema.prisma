@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Tenant {
+  id          String                     @id @db.Text
+  slug        String                     @unique @db.Text
+  displayName String                     @map("display_name") @db.Text
+  createdAt   DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime                   @default(now()) @map("updated_at") @db.Timestamptz(6)
+  users       User[]
+  auditLogs   AuditLogEntry[]
+  events      CalendarEvent[]
+  notifications Notification[]
+  aiInteractions AiInteractionPlaceholder[]
+
+  @@map("tenants")
+}
+
+model User {
+  id           String    @id @db.Text
+  tenantId     String    @map("tenant_id") @db.Text
+  email        String    @db.Text
+  displayName  String    @map("display_name") @db.Text
+  role         String    @db.Text
+  authProvider String    @map("auth_provider") @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+model AuditLogEntry {
+  id          String   @id @db.Text
+  tenantId    String   @map("tenant_id") @db.Text
+  actorUserId String   @map("actor_user_id") @db.Text
+  action      String   @db.Text
+  entityType  String   @map("entity_type") @db.Text
+  entityId    String   @map("entity_id") @db.Text
+  detail      Json     @db.JsonB
+  sourceIp    String?  @map("source_ip") @db.Text
+  occurredAt  DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, occurredAt])
+  @@map("audit_log_entries")
+}
+
+model CalendarEvent {
+  id          String   @id @db.Text
+  tenantId    String   @map("tenant_id") @db.Text
+  caseId      String?  @map("case_id") @db.Text
+  title       String   @db.Text
+  startsAt    DateTime @map("starts_at") @db.Timestamptz(6)
+  endsAt      DateTime @map("ends_at") @db.Timestamptz(6)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, startsAt])
+  @@map("calendar_events")
+}
+
+model Notification {
+  id          String    @id @db.Text
+  tenantId    String    @map("tenant_id") @db.Text
+  userId      String    @map("user_id") @db.Text
+  title       String    @db.Text
+  body        String    @db.Text
+  severity    String    @db.Text
+  readAt      DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId])
+  @@map("notifications")
+}
+
+model AiInteractionPlaceholder {
+  id               String   @id @db.Text
+  tenantId         String   @map("tenant_id") @db.Text
+  purpose          String   @db.Text
+  status           String   @db.Text
+  modelName        String?  @map("model_name") @db.Text
+  promptTemplateId String?  @map("prompt_template_id") @db.Text
+  metadata         Json     @db.JsonB
+  requestedAt      DateTime @map("requested_at") @db.Timestamptz(6)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@map("ai_interaction_placeholders")
+}

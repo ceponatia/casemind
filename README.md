@@ -15,10 +15,18 @@ CaseMind is a CJIS-oriented, multi-tenant case management platform for prosecuto
 1. Install dependencies with `pnpm install`.
 2. Copy `.env.example` to `.env`.
 3. Start local infrastructure with `pnpm infra:up`.
-4. Confirm service status with `pnpm infra:status`.
-5. Run validation with `pnpm validate`.
+4. Apply the local database schema and indexes with `pnpm db:reset:local`.
+5. Confirm service status with `pnpm infra:status`.
+6. Run validation with `pnpm validate`.
 
-## Phase 1 scope
+## Local database workflows
+
+- `pnpm db:migrate:local` applies the checked-in PostgreSQL migration set and provisions the restricted local app role.
+- `pnpm db:indexes:local` reapplies required MongoDB indexes.
+- `pnpm db:seed:local` loads deterministic synthetic tenant, user, case, person, and supporting records.
+- `pnpm db:reset:local` resets PostgreSQL, reprovisions the restricted local app role, rebuilds MongoDB indexes, and reseeds both stores.
+
+## Currently local scoped
 
 Phase 1 local implementation is focused on developer infrastructure and test scaffolding. Cloud-only work such as GovCloud deployment stacks, managed AWS services, and Atlas private connectivity remains deferred until a non-local environment is introduced.
 
