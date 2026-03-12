@@ -261,7 +261,6 @@ export class PostgresRelationalRepository implements RelationalRepository {
     context: RepositoryContext,
     input: NewTenantRecord,
   ): Promise<TenantRecord> {
-    requireContext(context);
     const tenantId = input.id ?? context.tenantId;
 
     if (tenantId !== context.tenantId) {
@@ -270,38 +269,41 @@ export class PostgresRelationalRepository implements RelationalRepository {
       );
     }
 
-    const result = await this.pool.query(
-      `
-        INSERT INTO tenants (id, slug, display_name)
-        VALUES ($1, $2, $3)
-        ON CONFLICT (id) DO UPDATE
-          SET slug = EXCLUDED.slug,
-              display_name = EXCLUDED.display_name,
-              updated_at = NOW()
-        RETURNING *
-      `,
-      [tenantId, input.slug, input.displayName],
-    );
+    return this.withTenantClient(context, async (client) => {
+      const result = await client.query(
+        `
+          INSERT INTO tenants (id, slug, display_name)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (id) DO UPDATE
+            SET slug = EXCLUDED.slug,
+                display_name = EXCLUDED.display_name,
+                updated_at = NOW()
+          RETURNING *
+        `,
+        [tenantId, input.slug, input.displayName],
+      );
 
-    return mapTenant(
-      requireRow(
-        result.rows[0] as PostgresRow | undefined,
-        "Failed to create tenant.",
-      ),
-    );
+      return mapTenant(
+        requireRow(
+          result.rows[0] as PostgresRow | undefined,
+          "Failed to create tenant.",
+        ),
+      );
+    });
   }
 
   public async getTenant(
     context: RepositoryContext,
   ): Promise<TenantRecord | null> {
-    requireContext(context);
-    const result = await this.pool.query(
-      "SELECT * FROM tenants WHERE id = $1",
-      [context.tenantId],
-    );
-    return result.rows[0] === undefined
-      ? null
-      : mapTenant(result.rows[0] as PostgresRow);
+    return this.withTenantClient(context, async (client) => {
+      const result = await client.query(
+        "SELECT * FROM tenants WHERE id = $1",
+        [context.tenantId],
+      );
+      return result.rows[0] === undefined
+        ? null
+        : mapTenant(result.rows[0] as PostgresRow);
+    });
   }
 
   public async createUser(
