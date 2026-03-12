@@ -82,6 +82,9 @@ AS $$
   SELECT NULLIF(current_setting('app.current_tenant_id', true), '');
 $$;
 
+ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenants FORCE ROW LEVEL SECURITY;
+
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users FORCE ROW LEVEL SECURITY;
 ALTER TABLE audit_log_entries ENABLE ROW LEVEL SECURITY;
@@ -117,6 +120,11 @@ DROP POLICY IF EXISTS ai_interaction_placeholders_tenant_isolation ON ai_interac
 CREATE POLICY ai_interaction_placeholders_tenant_isolation ON ai_interaction_placeholders
   USING (tenant_id = casemind_current_tenant_id())
   WITH CHECK (tenant_id = casemind_current_tenant_id());
+
+DROP POLICY IF EXISTS tenants_self_isolation ON tenants;
+CREATE POLICY tenants_self_isolation ON tenants
+  USING (id = casemind_current_tenant_id())
+  WITH CHECK (id = casemind_current_tenant_id());
 
 -- NOTE: Application database roles, passwords, and GRANTs for casemind_app
 -- are provisioned via infra/bootstrap (e.g., Docker init/admin scripts),
