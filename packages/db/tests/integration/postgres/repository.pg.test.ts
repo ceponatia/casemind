@@ -7,6 +7,7 @@ import {
   applyPostgresMigrations,
   buildApplicationRoleConnectionString,
   createPostgresPool,
+  provisionPostgresApplicationRole,
 } from "../../../src/index.js";
 
 describe("Postgres relational repository", () => {
@@ -14,12 +15,23 @@ describe("Postgres relational repository", () => {
     const instance = await startPostgresTestInstance({
       database: "casemind_repo_test",
     });
+    const appRole = {
+      username: "casemind_app",
+      password: "casemind_app_test_only",
+    };
 
     try {
       await applyPostgresMigrations(instance.connectionString);
+      await provisionPostgresApplicationRole(
+        instance.connectionString,
+        appRole,
+      );
       const repository = new PostgresRelationalRepository(
         createPostgresPool(
-          buildApplicationRoleConnectionString(instance.connectionString),
+          buildApplicationRoleConnectionString(
+            instance.connectionString,
+            appRole,
+          ),
         ),
       );
       try {

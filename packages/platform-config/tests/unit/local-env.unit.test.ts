@@ -11,6 +11,10 @@ describe("getLocalPlatformConfig", () => {
     expect(config.services.postgresUrl).toBe(
       "postgresql://casemind:casemind@localhost:5432/casemind",
     );
+    expect(config.services.postgresApp).toEqual({
+      username: "casemind_app",
+      password: "casemind_app_local_dev_only_change_me",
+    });
     expect(config.services.objectStorage.buckets.documents).toBe(
       "casemind-documents-dev",
     );
@@ -20,6 +24,8 @@ describe("getLocalPlatformConfig", () => {
     const config = getLocalPlatformConfig({
       CASEMIND_STAGE: "staging",
       CASEMIND_POSTGRES_URL: "postgresql://custom",
+      CASEMIND_POSTGRES_APP_USERNAME: "staging_app",
+      CASEMIND_POSTGRES_APP_PASSWORD: "staging-secret",
       CASEMIND_OBJECT_STORAGE_FORCE_PATH_STYLE: "false",
       CASEMIND_LOG_RETENTION_DAYS: "30",
     });
@@ -27,6 +33,10 @@ describe("getLocalPlatformConfig", () => {
     expect(config.stack.stage).toBe("staging");
     expect(config.stack.logRetentionDays).toBe(30);
     expect(config.services.postgresUrl).toBe("postgresql://custom");
+    expect(config.services.postgresApp).toEqual({
+      username: "staging_app",
+      password: "staging-secret",
+    });
     expect(config.services.objectStorage.forcePathStyle).toBe(false);
   });
 });

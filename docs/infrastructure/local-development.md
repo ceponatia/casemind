@@ -32,7 +32,9 @@ Redis uses host port `6380` by default so the stack is less likely to collide wi
 
 The local database workflow is deterministic by default. `pnpm db:reset:local` reapplies the checked-in PostgreSQL migration set, recreates MongoDB indexes, and loads synthetic data for one demo tenant so later auth, audit, RBAC, and UI work can develop without live CJI.
 
-PostgreSQL migrations also provision a restricted `casemind_app` role for row-level-security verification. The current local service contract still exposes the administrative connection string for tooling, while package-level integration tests use the application role to confirm tenant isolation behavior.
+The local database admin workflow provisions a restricted PostgreSQL application role after migrations using `CASEMIND_POSTGRES_APP_USERNAME` and `CASEMIND_POSTGRES_APP_PASSWORD`. Schema migrations stay limited to database objects and policies so they remain portable to managed PostgreSQL environments where role creation may be restricted.
+
+The current local service contract still exposes the administrative connection string for tooling, while package-level integration tests use the provisioned application role to confirm tenant isolation behavior.
 
 ## Buckets
 

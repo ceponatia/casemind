@@ -119,6 +119,18 @@ export function getLocalPlatformServiceContract(
       "CASEMIND_POSTGRES_URL",
       "postgresql://casemind:casemind@localhost:5432/casemind",
     ),
+    postgresApp: {
+      username: readRequired(
+        env.CASEMIND_POSTGRES_APP_USERNAME,
+        "CASEMIND_POSTGRES_APP_USERNAME",
+        "casemind_app",
+      ),
+      password: readRequired(
+        env.CASEMIND_POSTGRES_APP_PASSWORD,
+        "CASEMIND_POSTGRES_APP_PASSWORD",
+        "casemind_app_local_dev_only_change_me",
+      ),
+    },
     mongodbUrl: readRequired(
       env.CASEMIND_MONGODB_URL,
       "CASEMIND_MONGODB_URL",

@@ -31,6 +31,11 @@ const MIGRATIONS_ROOT = join(
 
 type PostgresRow = Record<string, unknown>;
 
+export interface PostgresRoleCredentials {
+  username: string;
+  password: string;
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -195,13 +200,66 @@ function requireRow<T>(row: T | undefined, message: string): T {
   return row;
 }
 
+function quotePostgresIdentifier(value: string): string {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+function quotePostgresLiteral(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
 export function buildApplicationRoleConnectionString(
   connectionString: string,
+  credentials: PostgresRoleCredentials,
 ): string {
   const url = new URL(connectionString);
-  url.username = "casemind_app";
-  url.password = "casemind_app";
+  url.username = credentials.username;
+  url.password = credentials.password;
   return url.toString();
+}
+
+export async function provisionPostgresApplicationRole(
+  connectionString: string,
+  credentials: PostgresRoleCredentials,
+): Promise<void> {
+  const roleName = quotePostgresIdentifier(credentials.username);
+  const password = quotePostgresLiteral(credentials.password);
+  const pool = createPostgresPool(connectionString);
+  const client = await connectWithRetry(pool);
+
+  try {
+    const existingRole = await client.query(
+      "SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1",
+      [credentials.username],
+    );
+
+    if (existingRole.rowCount === 0) {
+      await client.query(
+        `CREATE ROLE ${roleName} LOGIN PASSWORD ${password} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`,
+      );
+    } else {
+      await client.query(
+        `ALTER ROLE ${roleName} WITH LOGIN PASSWORD ${password} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT`,
+      );
+    }
+
+    await client.query(`GRANT USAGE ON SCHEMA public TO ${roleName}`);
+    await client.query(
+      `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${roleName}`,
+    );
+    await client.query(
+      `GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${roleName}`,
+    );
+    await client.query(
+      `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${roleName}`,
+    );
+    await client.query(
+      `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ${roleName}`,
+    );
+  } finally {
+    client.release();
+    await pool.end();
+  }
 }
 
 export function createPostgresPool(connectionString: string): Pool {

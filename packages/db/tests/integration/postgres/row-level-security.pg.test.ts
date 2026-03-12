@@ -6,6 +6,7 @@ import {
   applyPostgresMigrations,
   buildApplicationRoleConnectionString,
   createPostgresPool,
+  provisionPostgresApplicationRole,
 } from "../../../src/index.js";
 
 describe("PostgreSQL row-level security", () => {
@@ -13,13 +14,21 @@ describe("PostgreSQL row-level security", () => {
     const instance = await startPostgresTestInstance({
       database: "casemind_rls_test",
     });
+    const appRole = {
+      username: "casemind_app",
+      password: "casemind_app_test_only",
+    };
     const adminPool = createPostgresPool(instance.connectionString);
     const appPool = createPostgresPool(
-      buildApplicationRoleConnectionString(instance.connectionString),
+      buildApplicationRoleConnectionString(instance.connectionString, appRole),
     );
 
     try {
       await applyPostgresMigrations(instance.connectionString);
+      await provisionPostgresApplicationRole(
+        instance.connectionString,
+        appRole,
+      );
 
       await adminPool.query(
         "INSERT INTO tenants (id, slug, display_name) VALUES ($1, $2, $3), ($4, $5, $6)",
