@@ -44,18 +44,10 @@ BEGIN
 END;
 $$;
 
-DO $$
-DECLARE
-  start_month DATE := (date_trunc('month', current_date) - INTERVAL '12 months')::date;
-  month_offset INTEGER;
-BEGIN
-  FOR month_offset IN 0..24 LOOP
-    PERFORM casemind_create_audit_log_month_partition(
-      (start_month + ((month_offset || ' month')::interval))::date
-    );
-  END LOOP;
-END;
-$$;
+-- Note: Monthly partitions are created operationally by invoking
+-- casemind_create_audit_log_month_partition(month_start) from application
+-- or maintenance tasks. The migration itself remains deterministic and
+-- only defines the partitioned table, default partition, and helper.
 
 CREATE INDEX IF NOT EXISTS audit_log_entries_tenant_occurred_idx
   ON audit_log_entries (tenant_id, occurred_at DESC, id DESC);
