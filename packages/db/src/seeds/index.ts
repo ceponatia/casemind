@@ -212,10 +212,11 @@ export function createDeterministicSeedSet(
       {
         id: "audit-001",
         actorUserId,
-        action: "seed.initialized",
-        entityType: "tenant",
-        entityId: tenantId,
-        detail: {
+        action: "create",
+        outcome: "succeeded",
+        resourceType: "tenant_seed",
+        resourceId: tenantId,
+        metadata: {
           source: "ph03-seed",
           mode: "deterministic",
         },

@@ -78,14 +78,56 @@ export interface UserRecord extends TenantScopedRecord {
   authProvider: string;
 }
 
-export interface AuditLogEntry extends TenantScopedRecord {
-  actorUserId: string;
-  action: string;
-  entityType: string;
-  entityId: string;
-  detail: Record<string, string>;
+export type AuditLogAction =
+  | "view"
+  | "create"
+  | "update"
+  | "delete"
+  | "export"
+  | "login"
+  | "logout"
+  | "break_glass";
+
+export type AuditLogOutcome = "succeeded" | "failed" | "denied";
+
+export type AuditMetadataValue = string | number | boolean | null;
+
+export type AuditMetadata = Record<string, AuditMetadataValue>;
+
+export interface AuditLogEntry {
+  id: string;
+  tenantId: string;
+  actorUserId?: string;
+  action: AuditLogAction;
+  outcome: AuditLogOutcome;
+  resourceType: string;
+  resourceId?: string;
+  metadata: AuditMetadata;
   sourceIp?: string;
+  userAgent?: string;
+  deviceFingerprint?: string;
+  justification?: string;
+  requestId?: string;
+  correlationId?: string;
   occurredAt: string;
+  createdAt: string;
+}
+
+export interface AuditLogQuery {
+  actorUserId?: string;
+  action?: AuditLogAction | AuditLogAction[];
+  outcome?: AuditLogOutcome | AuditLogOutcome[];
+  resourceType?: string;
+  resourceId?: string;
+  fromOccurredAt?: string;
+  toOccurredAt?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface AuditLogQueryResult {
+  entries: AuditLogEntry[];
+  nextCursor?: string;
 }
 
 export interface CalendarEvent extends TenantScopedRecord {
@@ -108,7 +150,7 @@ export interface AiInteractionPlaceholder extends TenantScopedRecord {
   status: string;
   modelName?: string;
   promptTemplateId?: string;
-  metadata: Record<string, string>;
+  metadata: AuditMetadata;
   requestedAt: string;
 }
 
@@ -193,12 +235,18 @@ export interface NewUserRecord {
 
 export interface NewAuditLogEntry {
   id?: string;
-  actorUserId: string;
-  action: string;
-  entityType: string;
-  entityId: string;
-  detail: Record<string, string>;
+  actorUserId?: string;
+  action: AuditLogAction;
+  outcome?: AuditLogOutcome;
+  resourceType: string;
+  resourceId?: string;
+  metadata?: AuditMetadata;
   sourceIp?: string;
+  userAgent?: string;
+  deviceFingerprint?: string;
+  justification?: string;
+  requestId?: string;
+  correlationId?: string;
   occurredAt?: string;
 }
 
@@ -225,7 +273,7 @@ export interface NewAiInteractionPlaceholder {
   status: string;
   modelName?: string;
   promptTemplateId?: string;
-  metadata: Record<string, string>;
+  metadata: AuditMetadata;
   requestedAt?: string;
 }
 

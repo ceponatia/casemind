@@ -5,10 +5,18 @@ import { fileURLToPath } from "node:url";
 
 import { Pool, type PoolClient } from "pg";
 
+import {
+  createAuditLogCursor,
+  normalizeAuditMetadata,
+  parseAuditLogCursor,
+  resolveAuditLogQueryLimit,
+} from "../audit/index.js";
 import type { RelationalRepository, RepositoryContext } from "../contracts.js";
 import type {
   AiInteractionPlaceholder,
   AuditLogEntry,
+  AuditLogQuery,
+  AuditLogQueryResult,
   CalendarEvent,
   NewAiInteractionPlaceholder,
   NewAuditLogEntry,
@@ -62,13 +70,18 @@ function normalizeTimestamp(
   return value instanceof Date ? value.toISOString() : value;
 }
 
-function parseJsonRecord(value: unknown): Record<string, string> {
+function parseJsonRecord(
+  value: unknown,
+): Record<string, string | number | boolean | null> {
   if (typeof value === "string") {
-    return JSON.parse(value) as Record<string, string>;
+    return JSON.parse(value) as Record<
+      string,
+      string | number | boolean | null
+    >;
   }
 
   if (typeof value === "object" && value !== null) {
-    return value as Record<string, string>;
+    return value as Record<string, string | number | boolean | null>;
   }
 
   return {};
@@ -126,20 +139,32 @@ function mapUser(row: PostgresRow): UserRecord {
 }
 
 function mapAuditLogEntry(row: PostgresRow): AuditLogEntry {
+  const actorUserId = readOptionalString(row, "actor_user_id");
+  const resourceId = readOptionalString(row, "resource_id");
   const sourceIp = readOptionalString(row, "source_ip");
+  const userAgent = readOptionalString(row, "user_agent");
+  const deviceFingerprint = readOptionalString(row, "device_fingerprint");
+  const justification = readOptionalString(row, "justification");
+  const requestId = readOptionalString(row, "request_id");
+  const correlationId = readOptionalString(row, "correlation_id");
 
   return {
     id: readString(row, "id"),
     tenantId: readString(row, "tenant_id"),
-    actorUserId: readString(row, "actor_user_id"),
-    action: readString(row, "action"),
-    entityType: readString(row, "entity_type"),
-    entityId: readString(row, "entity_id"),
-    detail: parseJsonRecord(row.detail),
+    ...(actorUserId === undefined ? {} : { actorUserId }),
+    action: readString(row, "action") as AuditLogEntry["action"],
+    outcome: readString(row, "outcome") as AuditLogEntry["outcome"],
+    resourceType: readString(row, "resource_type"),
+    ...(resourceId === undefined ? {} : { resourceId }),
+    metadata: normalizeAuditMetadata(parseJsonRecord(row.metadata)),
     ...(sourceIp === undefined ? {} : { sourceIp }),
+    ...(userAgent === undefined ? {} : { userAgent }),
+    ...(deviceFingerprint === undefined ? {} : { deviceFingerprint }),
+    ...(justification === undefined ? {} : { justification }),
+    ...(requestId === undefined ? {} : { requestId }),
+    ...(correlationId === undefined ? {} : { correlationId }),
     occurredAt: readTimestamp(row, "occurred_at") ?? nowIso(),
     createdAt: readTimestamp(row, "created_at") ?? nowIso(),
-    updatedAt: readTimestamp(row, "updated_at") ?? nowIso(),
   };
 }
 
@@ -200,6 +225,42 @@ function requireRow<T>(row: T | undefined, message: string): T {
   return row;
 }
 
+function appendArrayFilter(
+  clauses: string[],
+  parameters: unknown[],
+  column: string,
+  filter: string | string[] | undefined,
+): void {
+  if (filter === undefined) {
+    return;
+  }
+
+  const normalizedValues = (Array.isArray(filter) ? filter : [filter]).filter(
+    (value) => value.length > 0,
+  );
+
+  if (normalizedValues.length === 0) {
+    return;
+  }
+
+  parameters.push(normalizedValues);
+  clauses.push(` AND ${column} = ANY($${parameters.length})`);
+}
+
+function appendScalarFilter(
+  values: string[],
+  parameters: unknown[],
+  column: string,
+  filter: string | undefined,
+): void {
+  if (filter === undefined) {
+    return;
+  }
+
+  parameters.push(filter);
+  values.push(` AND ${column} = $${parameters.length}`);
+}
+
 function quotePostgresIdentifier(value: string): string {
   return `"${value.replaceAll('"', '""')}"`;
 }
@@ -255,6 +316,9 @@ export async function provisionPostgresApplicationRole(
     );
     await client.query(
       `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ${roleName}`,
+    );
+    await client.query(
+      `REVOKE UPDATE, DELETE ON TABLE audit_log_entries FROM ${roleName}`,
     );
   } finally {
     client.release();
@@ -354,10 +418,9 @@ export class PostgresRelationalRepository implements RelationalRepository {
     context: RepositoryContext,
   ): Promise<TenantRecord | null> {
     return this.withTenantClient(context, async (client) => {
-      const result = await client.query(
-        "SELECT * FROM tenants WHERE id = $1",
-        [context.tenantId],
-      );
+      const result = await client.query("SELECT * FROM tenants WHERE id = $1", [
+        context.tenantId,
+      ]);
       return result.rows[0] === undefined
         ? null
         : mapTenant(result.rows[0] as PostgresRow);
@@ -423,24 +486,52 @@ export class PostgresRelationalRepository implements RelationalRepository {
             tenant_id,
             actor_user_id,
             action,
-            entity_type,
-            entity_id,
-            detail,
+            outcome,
+            resource_type,
+            resource_id,
+            metadata,
             source_ip,
+            user_agent,
+            device_fingerprint,
+            justification,
+            request_id,
+            correlation_id,
             occurred_at
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)
+          VALUES (
+            $1,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            $7,
+            $8::jsonb,
+            $9,
+            $10,
+            $11,
+            $12,
+            $13,
+            $14,
+            $15
+          )
           RETURNING *
         `,
         [
           input.id ?? randomUUID(),
           context.tenantId,
-          input.actorUserId,
+          input.actorUserId ?? null,
           input.action,
-          input.entityType,
-          input.entityId,
-          JSON.stringify(input.detail),
+          input.outcome ?? "succeeded",
+          input.resourceType,
+          input.resourceId ?? null,
+          JSON.stringify(normalizeAuditMetadata(input.metadata)),
           input.sourceIp ?? null,
+          input.userAgent ?? null,
+          input.deviceFingerprint ?? null,
+          input.justification ?? null,
+          input.requestId ?? null,
+          input.correlationId ?? null,
           input.occurredAt ?? nowIso(),
         ],
       );
@@ -459,10 +550,91 @@ export class PostgresRelationalRepository implements RelationalRepository {
   ): Promise<AuditLogEntry[]> {
     return this.withTenantClient(context, async (client) => {
       const result = await client.query(
-        "SELECT * FROM audit_log_entries WHERE tenant_id = $1 ORDER BY occurred_at DESC",
+        `
+          SELECT *
+          FROM audit_log_entries
+          WHERE tenant_id = $1
+          ORDER BY occurred_at DESC, id DESC
+        `,
         [context.tenantId],
       );
       return result.rows.map((row) => mapAuditLogEntry(row as PostgresRow));
+    });
+  }
+
+  public async queryAuditLogEntries(
+    context: RepositoryContext,
+    query: AuditLogQuery,
+  ): Promise<AuditLogQueryResult> {
+    return this.withTenantClient(context, async (client) => {
+      const parameters: unknown[] = [context.tenantId];
+      const whereClauses = ["tenant_id = $1"];
+      const extraClauses: string[] = [];
+      const limit = resolveAuditLogQueryLimit(query);
+
+      appendArrayFilter(extraClauses, parameters, "action", query.action);
+      appendArrayFilter(extraClauses, parameters, "outcome", query.outcome);
+      appendScalarFilter(
+        extraClauses,
+        parameters,
+        "resource_type",
+        query.resourceType,
+      );
+      appendScalarFilter(
+        extraClauses,
+        parameters,
+        "resource_id",
+        query.resourceId,
+      );
+      appendScalarFilter(
+        extraClauses,
+        parameters,
+        "actor_user_id",
+        query.actorUserId,
+      );
+
+      if (query.fromOccurredAt !== undefined) {
+        parameters.push(query.fromOccurredAt);
+        extraClauses.push(` AND occurred_at >= $${parameters.length}`);
+      }
+
+      if (query.toOccurredAt !== undefined) {
+        parameters.push(query.toOccurredAt);
+        extraClauses.push(` AND occurred_at <= $${parameters.length}`);
+      }
+
+      if (query.cursor !== undefined) {
+        const cursor = parseAuditLogCursor(query.cursor);
+        parameters.push(cursor.occurredAt, cursor.id);
+        extraClauses.push(
+          ` AND (occurred_at < $${parameters.length - 1} OR (occurred_at = $${parameters.length - 1} AND id < $${parameters.length}))`,
+        );
+      }
+
+      parameters.push(limit + 1);
+
+      const result = await client.query(
+        `
+          SELECT *
+          FROM audit_log_entries
+          WHERE ${whereClauses.join(" AND ")}${extraClauses.join("")}
+          ORDER BY occurred_at DESC, id DESC
+          LIMIT $${parameters.length}
+        `,
+        parameters,
+      );
+      const entries = result.rows
+        .slice(0, limit)
+        .map((row) => mapAuditLogEntry(row as PostgresRow));
+      const nextCursor =
+        result.rows.length > limit
+          ? createAuditLogCursor(entries[entries.length - 1] as AuditLogEntry)
+          : undefined;
+
+      return {
+        entries,
+        ...(nextCursor === undefined ? {} : { nextCursor }),
+      };
     });
   }
 
