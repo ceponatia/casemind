@@ -520,7 +520,7 @@ export class PostgresRelationalRepository implements RelationalRepository {
         [
           input.id ?? randomUUID(),
           context.tenantId,
-          input.actorUserId ?? null,
+          input.actorUserId ?? context.actorUserId,
           input.action,
           input.outcome ?? "succeeded",
           input.resourceType,
