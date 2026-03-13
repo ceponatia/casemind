@@ -111,6 +111,25 @@ function readOptionalString(row: PostgresRow, key: string): string | undefined {
   return value;
 }
 
+function readStringArray(row: PostgresRow, key: string): string[] {
+  const value = row[key];
+
+  if (!Array.isArray(value)) {
+    throw new Error(`Expected string array value for ${key}.`);
+  }
+
+  const entries: unknown[] = value;
+  const stringEntries = entries.filter(
+    (entry): entry is string => typeof entry === "string",
+  );
+
+  if (stringEntries.length !== entries.length) {
+    throw new Error(`Expected string array value for ${key}.`);
+  }
+
+  return stringEntries;
+}
+
 function readTimestamp(row: PostgresRow, key: string): string | undefined {
   return normalizeTimestamp(row[key] as Date | string | null | undefined);
 }
@@ -131,7 +150,7 @@ function mapUser(row: PostgresRow): UserRecord {
     tenantId: readString(row, "tenant_id"),
     email: readString(row, "email"),
     displayName: readString(row, "display_name"),
-    role: readString(row, "role"),
+    roleIds: readStringArray(row, "role_ids"),
     authProvider: readString(row, "auth_provider"),
     createdAt: readTimestamp(row, "created_at") ?? nowIso(),
     updatedAt: readTimestamp(row, "updated_at") ?? nowIso(),
@@ -439,7 +458,7 @@ export class PostgresRelationalRepository implements RelationalRepository {
             tenant_id,
             email,
             display_name,
-            role,
+            role_ids,
             auth_provider
           )
           VALUES ($1, $2, $3, $4, $5, $6)
@@ -450,7 +469,7 @@ export class PostgresRelationalRepository implements RelationalRepository {
           context.tenantId,
           input.email,
           input.displayName,
-          input.role,
+          input.roleIds,
           input.authProvider,
         ],
       );

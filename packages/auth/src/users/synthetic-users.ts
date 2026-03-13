@@ -3,10 +3,24 @@ import type {
   LocalAuthConfig,
   LocalUserAccount,
 } from "../types.js";
+import {
+  ROLE_IDS,
+  type RoleId,
+} from "@casemind/rbac";
 import { createLocalUserAccount } from "./in-memory-user-directory.js";
 
 export const DEFAULT_SYNTHETIC_PASSWORD = "CaseMindLocal!23";
 export const DEFAULT_SYNTHETIC_TENANT_ID = "tenant-local-demo";
+
+const [
+  OFFICE_ADMIN_ROLE_ID,
+  DIVISION_CHIEF_ROLE_ID,
+  APA_ROLE_ID,
+  JUVENILE_APA_ROLE_ID,
+  VICTIM_ADVOCATE_ROLE_ID,
+  LEGAL_ASSISTANT_ROLE_ID,
+  READ_ONLY_ROLE_ID,
+] = ROLE_IDS satisfies readonly RoleId[];
 
 const DEFAULT_SYNTHETIC_USER_BLUEPRINTS: ReadonlyArray<
   Omit<CreateLocalUserInput, "password" | "tenantId">
@@ -15,43 +29,43 @@ const DEFAULT_SYNTHETIC_USER_BLUEPRINTS: ReadonlyArray<
     userId: "usr-office-admin",
     email: "office.admin@local.casemind.test",
     displayName: "Office Admin (Synthetic)",
-    roleIds: ["office-admin"],
+    roleIds: [OFFICE_ADMIN_ROLE_ID],
   },
   {
     userId: "usr-division-chief",
     email: "division.chief@local.casemind.test",
     displayName: "Division Chief (Synthetic)",
-    roleIds: ["division-chief"],
+    roleIds: [DIVISION_CHIEF_ROLE_ID],
   },
   {
     userId: "usr-apa",
     email: "apa@local.casemind.test",
     displayName: "Assistant Prosecuting Attorney (Synthetic)",
-    roleIds: ["apa"],
+    roleIds: [APA_ROLE_ID],
   },
   {
     userId: "usr-juvenile-apa",
     email: "juvenile.apa@local.casemind.test",
     displayName: "Juvenile APA (Synthetic)",
-    roleIds: ["juvenile-apa"],
+    roleIds: [JUVENILE_APA_ROLE_ID],
   },
   {
     userId: "usr-victim-advocate",
     email: "victim.advocate@local.casemind.test",
     displayName: "Victim Advocate (Synthetic)",
-    roleIds: ["victim-advocate"],
+    roleIds: [VICTIM_ADVOCATE_ROLE_ID],
   },
   {
     userId: "usr-legal-assistant",
     email: "legal.assistant@local.casemind.test",
     displayName: "Legal Assistant (Synthetic)",
-    roleIds: ["legal-assistant"],
+    roleIds: [LEGAL_ASSISTANT_ROLE_ID],
   },
   {
     userId: "usr-read-only",
     email: "read.only@local.casemind.test",
     displayName: "Read Only User (Synthetic)",
-    roleIds: ["read-only"],
+    roleIds: [READ_ONLY_ROLE_ID],
   },
 ];
 

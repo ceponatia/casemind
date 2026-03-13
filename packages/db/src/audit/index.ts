@@ -5,6 +5,7 @@ import type {
   RelationalRepository,
   RepositoryContext,
 } from "../contracts.js";
+import type { AuthorizationAuditEvent } from "@casemind/rbac";
 import type {
   AuditLogAction,
   AuditLogEntry,
@@ -52,6 +53,10 @@ export interface CreateRelationalAuthAuditSinkOptions {
   relationalRepository: Pick<RelationalRepository, "appendAuditLog">;
   defaultTenantId?: string;
   serviceActorUserId?: string;
+}
+
+export interface CreateRelationalAuthorizationAuditSinkOptions {
+  relationalRepository: Pick<RelationalRepository, "appendAuditLog">;
 }
 
 export interface AuditedRepositories {
@@ -555,6 +560,41 @@ export function createRelationalAuthAuditSink(
       );
     },
   };
+}
+
+export function createRelationalAuthorizationAuditSink(
+  options: CreateRelationalAuthorizationAuditSinkOptions,
+): { record(event: AuthorizationAuditEvent): Promise<void> } {
+  return {
+    async record(event): Promise<void> {
+      await options.relationalRepository.appendAuditLog(
+        {
+          tenantId: event.tenantId,
+          actorUserId: event.actorUserId,
+        },
+        {
+          actorUserId: event.actorUserId,
+          action: mapAuthorizationAction(event.action),
+          outcome: event.outcome,
+          resourceType: event.resourceType,
+          ...optionalStringProperty("resourceId", event.resourceId),
+          ...optionalStringProperty("sourceIp", event.sourceIp),
+          ...optionalStringProperty("userAgent", event.userAgent),
+          ...optionalStringProperty("justification", event.justification),
+          ...optionalStringProperty("requestId", event.requestId),
+          ...optionalStringProperty("correlationId", event.correlationId),
+          ...(event.occurredAt === undefined ? {} : { occurredAt: event.occurredAt }),
+          metadata: normalizeAuditMetadata(event.metadata),
+        },
+      );
+    },
+  };
+}
+
+function mapAuthorizationAction(
+  action: AuthorizationAuditEvent["action"],
+): AuditLogAction {
+  return action === "read" ? "view" : action;
 }
 
 function mapAuthAuditEvent(event: AuthAuditEventLike): {

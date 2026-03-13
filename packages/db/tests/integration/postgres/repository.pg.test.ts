@@ -6,6 +6,7 @@ import {
   PostgresRelationalRepository,
   applyPostgresMigrations,
   buildApplicationRoleConnectionString,
+  createRelationalAuthorizationAuditSink,
   createPostgresPool,
   provisionPostgresApplicationRole,
 } from "../../../src/index.js";
@@ -55,8 +56,24 @@ describe("Postgres relational repository", () => {
           id: context.actorUserId,
           email: "office.admin@casemind.local",
           displayName: "Office Admin",
-          role: "office-admin",
+          roleIds: ["office-admin"],
           authProvider: "credentials",
+        });
+        await createRelationalAuthorizationAuditSink({
+          relationalRepository: repository,
+        }).record({
+          tenantId: context.tenantId,
+          actorUserId: user.id,
+          action: "break_glass",
+          outcome: "succeeded",
+          resourceType: "criminal_case",
+          resourceId: "criminal-100",
+          metadata: {
+            originalAction: "read",
+            sensitivityTag: "sensitive_case",
+          },
+          justification: "Emergency supervisory review before an after-hours hearing.",
+          occurredAt: "2026-03-12T13:30:00.000Z",
         });
         await repository.appendAuditLog(context, {
           actorUserId: user.id,
@@ -116,7 +133,10 @@ describe("Postgres relational repository", () => {
           await repository.listAiInteractionPlaceholders(context);
 
         expect(users).toHaveLength(1);
-        expect(auditLogs).toHaveLength(2);
+        expect(auditLogs).toHaveLength(3);
+        expect(auditLogs.some((entry) => entry.action === "break_glass")).toBe(
+          true,
+        );
         expect(firstPage.entries).toHaveLength(1);
         expect(firstPage.nextCursor).toBeDefined();
         expect(secondPage.entries).toHaveLength(1);

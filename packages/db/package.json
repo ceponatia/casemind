@@ -8,6 +8,7 @@
     },
     "dependencies": {
         "@casemind/platform-config": "workspace:*",
+        "@casemind/rbac": "workspace:*",
         "@prisma/client": "^7.5.0",
         "mongodb": "^7.1.0",
         "pg": "^8.20.0"

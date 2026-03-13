@@ -5,6 +5,10 @@ import type {
   RelationalRepository,
   RepositoryContext,
 } from "../contracts.js";
+import {
+  ROLE_IDS,
+  type RoleId,
+} from "@casemind/rbac";
 import type {
   NewAiInteractionPlaceholder,
   NewAuditLogEntry,
@@ -40,11 +44,29 @@ export interface DeterministicSeedSet {
 
 const DEFAULT_TENANT_ID = "tenant-local-demo";
 const DEFAULT_ACTOR_USER_ID = "user-office-admin";
+const SECONDARY_TENANT_ID = "tenant-local-secondary";
+
+const [
+  OFFICE_ADMIN_ROLE_ID,
+  DIVISION_CHIEF_ROLE_ID,
+  APA_ROLE_ID,
+  JUVENILE_APA_ROLE_ID,
+  VICTIM_ADVOCATE_ROLE_ID,
+  LEGAL_ASSISTANT_ROLE_ID,
+  READ_ONLY_ROLE_ID,
+] = ROLE_IDS satisfies readonly RoleId[];
+
+function withOptionalSuffix(value: string, suffix: string): string {
+  return suffix.length === 0 ? value : `${value}-${suffix}`;
+}
 
 export function createDeterministicSeedSet(
   options: {
     tenantId?: string;
     actorUserId?: string;
+    idSuffix?: string;
+    slug?: string;
+    displayName?: string;
   } = {},
 ): DeterministicSeedSet {
   const tenantId =
@@ -52,10 +74,16 @@ export function createDeterministicSeedSet(
     process.env.CASEMIND_AUTH_SYNTHETIC_TENANT_ID ??
     DEFAULT_TENANT_ID;
   const actorUserId = options.actorUserId ?? DEFAULT_ACTOR_USER_ID;
-  const familyUnitId = "family-unit-001";
-  const servicePlanId = "service-plan-001";
-  const criminalCaseId = "criminal-case-001";
-  const naCaseId = "na-case-001";
+  const idSuffix = options.idSuffix ?? "";
+  const familyUnitId = withOptionalSuffix("family-unit-001", idSuffix);
+  const servicePlanId = withOptionalSuffix("service-plan-001", idSuffix);
+  const criminalCaseId = withOptionalSuffix("criminal-case-001", idSuffix);
+  const criminalCaseTwoId = withOptionalSuffix("criminal-case-002", idSuffix);
+  const naCaseId = withOptionalSuffix("na-case-001", idSuffix);
+  const defendantPersonId = withOptionalSuffix("person-defendant-001", idSuffix);
+  const victimPersonId = withOptionalSuffix("person-victim-001", idSuffix);
+  const childPersonId = withOptionalSuffix("person-child-001", idSuffix);
+  const respondentPersonId = withOptionalSuffix("person-respondent-001", idSuffix);
 
   return {
     context: {
@@ -64,35 +92,65 @@ export function createDeterministicSeedSet(
     },
     tenant: {
       id: tenantId,
-      slug: "macomb-demo",
-      displayName: "Macomb Demo Office",
+      slug: options.slug ?? (tenantId === DEFAULT_TENANT_ID ? "macomb-demo" : "wayne-demo"),
+      displayName:
+        options.displayName ??
+        (tenantId === DEFAULT_TENANT_ID ? "Macomb Demo Office" : "Wayne Demo Office"),
     },
     users: [
       {
         id: actorUserId,
         email: "office.admin@casemind.local",
         displayName: "Office Admin",
-        role: "office-admin",
+        roleIds: [OFFICE_ADMIN_ROLE_ID],
         authProvider: "credentials",
       },
       {
-        id: "user-apa-001",
+        id: withOptionalSuffix("user-division-chief-001", idSuffix),
+        email: "division.chief@casemind.local",
+        displayName: "Division Chief",
+        roleIds: [DIVISION_CHIEF_ROLE_ID],
+        authProvider: "credentials",
+      },
+      {
+        id: withOptionalSuffix("user-apa-001", idSuffix),
         email: "apa@casemind.local",
         displayName: "Assigned APA",
-        role: "apa",
+        roleIds: [APA_ROLE_ID],
         authProvider: "credentials",
       },
       {
-        id: "user-juvenile-001",
+        id: withOptionalSuffix("user-juvenile-001", idSuffix),
         email: "juvenile.apa@casemind.local",
         displayName: "Juvenile Division APA",
-        role: "juvenile-division-apa",
+        roleIds: [JUVENILE_APA_ROLE_ID],
+        authProvider: "credentials",
+      },
+      {
+        id: withOptionalSuffix("user-victim-advocate-001", idSuffix),
+        email: "victim.advocate@casemind.local",
+        displayName: "Victim Advocate",
+        roleIds: [VICTIM_ADVOCATE_ROLE_ID],
+        authProvider: "credentials",
+      },
+      {
+        id: withOptionalSuffix("user-legal-assistant-001", idSuffix),
+        email: "legal.assistant@casemind.local",
+        displayName: "Legal Assistant",
+        roleIds: [LEGAL_ASSISTANT_ROLE_ID],
+        authProvider: "credentials",
+      },
+      {
+        id: withOptionalSuffix("user-read-only-001", idSuffix),
+        email: "read.only@casemind.local",
+        displayName: "Read-Only User",
+        roleIds: [READ_ONLY_ROLE_ID],
         authProvider: "credentials",
       },
     ],
     people: [
       {
-        id: "person-defendant-001",
+        id: defendantPersonId,
         firstName: "Jordan",
         lastName: "Parker",
         dateOfBirth: "1988-04-11",
@@ -100,7 +158,7 @@ export function createDeterministicSeedSet(
         externalIdentifiers: ["SID-1001"],
       },
       {
-        id: "person-victim-001",
+        id: victimPersonId,
         firstName: "Casey",
         lastName: "Nguyen",
         dateOfBirth: "1992-02-01",
@@ -108,7 +166,7 @@ export function createDeterministicSeedSet(
         externalIdentifiers: ["VICTIM-44"],
       },
       {
-        id: "person-child-001",
+        id: childPersonId,
         firstName: "Avery",
         lastName: "Thomas",
         dateOfBirth: "2016-07-19",
@@ -116,7 +174,7 @@ export function createDeterministicSeedSet(
         externalIdentifiers: ["CHILD-99"],
       },
       {
-        id: "person-respondent-001",
+        id: respondentPersonId,
         firstName: "Morgan",
         lastName: "Thomas",
         dateOfBirth: "1985-10-30",
@@ -131,18 +189,18 @@ export function createDeterministicSeedSet(
         status: "screening",
         court: "Macomb County Circuit",
         filedAt: "2026-03-01T13:00:00.000Z",
-        defendantPersonIds: ["person-defendant-001"],
-        victimPersonIds: ["person-victim-001"],
+        defendantPersonIds: [defendantPersonId],
+        victimPersonIds: [victimPersonId],
         chargeIds: ["charge-001", "charge-002"],
       },
       {
-        id: "criminal-case-002",
+        id: criminalCaseTwoId,
         caseNumber: "2026-CR-1002",
         status: "arraigned",
         court: "Macomb County District",
         filedAt: "2026-03-02T13:00:00.000Z",
-        defendantPersonIds: ["person-defendant-001"],
-        victimPersonIds: ["person-victim-001"],
+        defendantPersonIds: [defendantPersonId],
+        victimPersonIds: [victimPersonId],
         chargeIds: ["charge-003"],
       },
     ],
@@ -151,15 +209,15 @@ export function createDeterministicSeedSet(
         id: naCaseId,
         petitionNumber: "2026-NA-2001",
         status: "petition-filed",
-        childPersonIds: ["person-child-001"],
-        respondentPersonIds: ["person-respondent-001"],
+        childPersonIds: [childPersonId],
+        respondentPersonIds: [respondentPersonId],
         familyUnitId,
         servicePlanIds: [servicePlanId],
       },
     ],
     documents: [
       {
-        id: "document-001",
+        id: withOptionalSuffix("document-001", idSuffix),
         caseId: criminalCaseId,
         title: "Charging Packet",
         documentType: "charging-packet",
@@ -168,7 +226,7 @@ export function createDeterministicSeedSet(
         textContent: "Synthetic charging packet for local development.",
       },
       {
-        id: "document-002",
+        id: withOptionalSuffix("document-002", idSuffix),
         caseId: naCaseId,
         title: "Initial Petition",
         documentType: "petition",
@@ -179,10 +237,10 @@ export function createDeterministicSeedSet(
     ],
     evidence: [
       {
-        id: "evidence-001",
+        id: withOptionalSuffix("evidence-001", idSuffix),
         caseId: criminalCaseId,
         evidenceNumber: "EV-1001",
-        documentIds: ["document-001"],
+        documentIds: [withOptionalSuffix("document-001", idSuffix)],
         chainOfCustody: [
           "Booked by arresting officer",
           "Transferred to property room",
@@ -194,8 +252,8 @@ export function createDeterministicSeedSet(
       {
         id: familyUnitId,
         caseId: naCaseId,
-        childPersonIds: ["person-child-001"],
-        adultPersonIds: ["person-respondent-001"],
+        childPersonIds: [childPersonId],
+        adultPersonIds: [respondentPersonId],
         address: "123 Local Demo Ave, Mt Clemens, MI",
       },
     ],
@@ -210,7 +268,7 @@ export function createDeterministicSeedSet(
     ],
     auditLogEntries: [
       {
-        id: "audit-001",
+        id: withOptionalSuffix("audit-001", idSuffix),
         actorUserId,
         action: "create",
         outcome: "succeeded",
@@ -226,7 +284,7 @@ export function createDeterministicSeedSet(
     ],
     calendarEvents: [
       {
-        id: "calendar-001",
+        id: withOptionalSuffix("calendar-001", idSuffix),
         caseId: criminalCaseId,
         title: "Probable Cause Conference",
         startsAt: "2026-03-12T14:00:00.000Z",
@@ -235,7 +293,7 @@ export function createDeterministicSeedSet(
     ],
     notifications: [
       {
-        id: "notification-001",
+        id: withOptionalSuffix("notification-001", idSuffix),
         userId: actorUserId,
         title: "Seed data ready",
         body: "The PH03 deterministic seed has been loaded.",
@@ -244,7 +302,7 @@ export function createDeterministicSeedSet(
     ],
     aiInteractions: [
       {
-        id: "ai-001",
+        id: withOptionalSuffix("ai-001", idSuffix),
         purpose: "future-summary-placeholder",
         status: "pending",
         modelName: "deferred",
@@ -258,6 +316,19 @@ export function createDeterministicSeedSet(
   };
 }
 
+export function createLocalDevelopmentSeedSets(): DeterministicSeedSet[] {
+  return [
+    createDeterministicSeedSet(),
+    createDeterministicSeedSet({
+      tenantId: SECONDARY_TENANT_ID,
+      actorUserId: "user-office-admin-secondary",
+      idSuffix: "secondary",
+      slug: "wayne-demo",
+      displayName: "Wayne Demo Office",
+    }),
+  ];
+}
+
 export async function seedDeterministicLocalData(
   repositories: {
     relationalRepository: RelationalRepository;
@@ -265,72 +336,74 @@ export async function seedDeterministicLocalData(
     personRepository: PersonRepository;
     catalogRepository: CatalogRepository;
   },
-  seedSet: DeterministicSeedSet = createDeterministicSeedSet(),
+  seedSets: DeterministicSeedSet[] = createLocalDevelopmentSeedSets(),
 ): Promise<void> {
-  const { context } = seedSet;
+  for (const seedSet of seedSets) {
+    const { context } = seedSet;
 
-  await repositories.relationalRepository.createTenant(context, seedSet.tenant);
+    await repositories.relationalRepository.createTenant(context, seedSet.tenant);
 
-  for (const user of seedSet.users) {
-    await repositories.relationalRepository.createUser(context, user);
-  }
+    for (const user of seedSet.users) {
+      await repositories.relationalRepository.createUser(context, user);
+    }
 
-  for (const person of seedSet.people) {
-    await repositories.personRepository.createPerson(context, person);
-  }
+    for (const person of seedSet.people) {
+      await repositories.personRepository.createPerson(context, person);
+    }
 
-  for (const criminalCase of seedSet.criminalCases) {
-    await repositories.caseRepository.createCriminalCase(context, criminalCase);
-  }
+    for (const criminalCase of seedSet.criminalCases) {
+      await repositories.caseRepository.createCriminalCase(context, criminalCase);
+    }
 
-  for (const naCase of seedSet.naCases) {
-    await repositories.caseRepository.createNACase(context, naCase);
-  }
+    for (const naCase of seedSet.naCases) {
+      await repositories.caseRepository.createNACase(context, naCase);
+    }
 
-  for (const document of seedSet.documents) {
-    await repositories.catalogRepository.createDocument(context, document);
-  }
+    for (const document of seedSet.documents) {
+      await repositories.catalogRepository.createDocument(context, document);
+    }
 
-  for (const evidenceRecord of seedSet.evidence) {
-    await repositories.catalogRepository.createEvidence(
-      context,
-      evidenceRecord,
-    );
-  }
+    for (const evidenceRecord of seedSet.evidence) {
+      await repositories.catalogRepository.createEvidence(
+        context,
+        evidenceRecord,
+      );
+    }
 
-  for (const familyUnit of seedSet.familyUnits) {
-    await repositories.catalogRepository.createFamilyUnit(context, familyUnit);
-  }
+    for (const familyUnit of seedSet.familyUnits) {
+      await repositories.catalogRepository.createFamilyUnit(context, familyUnit);
+    }
 
-  for (const servicePlan of seedSet.servicePlans) {
-    await repositories.catalogRepository.createServicePlan(
-      context,
-      servicePlan,
-    );
-  }
+    for (const servicePlan of seedSet.servicePlans) {
+      await repositories.catalogRepository.createServicePlan(
+        context,
+        servicePlan,
+      );
+    }
 
-  for (const auditLog of seedSet.auditLogEntries) {
-    await repositories.relationalRepository.appendAuditLog(context, auditLog);
-  }
+    for (const auditLog of seedSet.auditLogEntries) {
+      await repositories.relationalRepository.appendAuditLog(context, auditLog);
+    }
 
-  for (const calendarEvent of seedSet.calendarEvents) {
-    await repositories.relationalRepository.createCalendarEvent(
-      context,
-      calendarEvent,
-    );
-  }
+    for (const calendarEvent of seedSet.calendarEvents) {
+      await repositories.relationalRepository.createCalendarEvent(
+        context,
+        calendarEvent,
+      );
+    }
 
-  for (const notification of seedSet.notifications) {
-    await repositories.relationalRepository.createNotification(
-      context,
-      notification,
-    );
-  }
+    for (const notification of seedSet.notifications) {
+      await repositories.relationalRepository.createNotification(
+        context,
+        notification,
+      );
+    }
 
-  for (const aiInteraction of seedSet.aiInteractions) {
-    await repositories.relationalRepository.createAiInteractionPlaceholder(
-      context,
-      aiInteraction,
-    );
+    for (const aiInteraction of seedSet.aiInteractions) {
+      await repositories.relationalRepository.createAiInteractionPlaceholder(
+        context,
+        aiInteraction,
+      );
+    }
   }
 }

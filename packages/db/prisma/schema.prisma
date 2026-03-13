@@ -26,7 +26,7 @@ model User {
   tenantId     String    @map("tenant_id") @db.Text
   email        String    @db.Text
   displayName  String    @map("display_name") @db.Text
-  role         String    @db.Text
+  roleIds      String[]  @map("role_ids") @db.Text
   authProvider String    @map("auth_provider") @db.Text
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
