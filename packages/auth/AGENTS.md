@@ -17,7 +17,7 @@ Barrel export: `src/index.ts`
 
 ## Dependencies
 
-- **Production:** `redis`
+- **Production:** `@casemind/rbac` (canonical role ids), `redis`
 - **Dev:** `@casemind/test-utils` (workspace), `fast-check`, vitest
 - **Consumed by:** no packages yet (will be consumed by app layer)
 
@@ -36,5 +36,5 @@ All commands work from within this package directory. Prerequisite: `pnpm instal
 
 - Export all public types, functions, and constants through `src/index.ts`. No subpath exports.
 - Session policies and password policies reflect CJIS Security Policy requirements. Do not weaken defaults without explicit compliance review.
-- `SYNTHETIC_USERS` are for local development and testing only — never reference real user data.
+- `SYNTHETIC_USERS` are for local development and testing only — never reference real user data. Their `roleIds` should come from `@casemind/rbac`, not ad hoc literals.
 - Property-based tests (fast-check) are used for crypto and policy validation. Maintain this coverage for security-critical paths.

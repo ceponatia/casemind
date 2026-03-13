@@ -70,10 +70,9 @@ const eslintConfig = defineConfig([
       "boundaries/elements": [
         { type: "platform-config", pattern: ["packages/platform-config"] },
         { type: "test-utils", pattern: ["packages/test-utils"] },
+        { type: "rbac", pattern: ["packages/rbac"] },
         { type: "auth", pattern: ["packages/auth"] },
         { type: "db", pattern: ["packages/db"] },
-        // Future packages register here:
-        // { type: "rbac", pattern: ["packages/rbac"] },
         // { type: "app", pattern: ["apps/*"], capture: ["app"] },
       ],
       "boundaries/dependency-nodes": ["import", "dynamic-import"],
@@ -86,9 +85,11 @@ const eslintConfig = defineConfig([
           default: "disallow",
           rules: [
             // db can import platform-config (production) and test-utils (dev)
-            { from: "db", allow: ["platform-config", "test-utils"] },
-            // auth can import test-utils (dev only)
-            { from: "auth", allow: ["test-utils"] },
+            { from: "db", allow: ["platform-config", "rbac", "test-utils"] },
+            // auth can import rbac (production) and test-utils (dev only)
+            { from: "auth", allow: ["rbac", "test-utils"] },
+            // rbac is a leaf package
+            { from: "rbac", allow: [] },
             // platform-config is a leaf — no cross-package imports
             { from: "platform-config", allow: [] },
             // test-utils is a leaf — no cross-package imports

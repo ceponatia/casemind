@@ -74,7 +74,7 @@ export interface ServicePlan extends TenantScopedRecord {
 export interface UserRecord extends TenantScopedRecord {
   email: string;
   displayName: string;
-  role: string;
+  roleIds: string[];
   authProvider: string;
 }
 
@@ -229,7 +229,7 @@ export interface NewUserRecord {
   id?: string;
   email: string;
   displayName: string;
-  role: string;
+  roleIds: string[];
   authProvider: string;
 }
 

@@ -46,6 +46,9 @@ importers:
 
   packages/auth:
     dependencies:
+      '@casemind/rbac':
+        specifier: workspace:*
+        version: link:../rbac
       redis:
         specifier: ^5.8.2
         version: 5.11.0
@@ -65,6 +68,9 @@ importers:
       '@casemind/platform-config':
         specifier: workspace:*
         version: link:../platform-config
+      '@casemind/rbac':
+        specifier: workspace:*
+        version: link:../rbac
       '@prisma/client':
         specifier: ^7.5.0
         version: 7.5.0(prisma@7.5.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3))(typescript@5.9.3)
@@ -96,6 +102,15 @@ importers:
 
   packages/platform-config:
     devDependencies:
+      vitest:
+        specifier: ^3.0.8
+        version: 3.2.4(@types/node@22.19.15)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+
+  packages/rbac:
+    devDependencies:
+      fast-check:
+        specifier: ^4.0.1
+        version: 4.6.0
       vitest:
         specifier: ^3.0.8
         version: 3.2.4(@types/node@22.19.15)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)

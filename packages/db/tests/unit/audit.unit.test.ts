@@ -5,6 +5,7 @@ import { InMemoryCaseRepository } from "../../src/testing/in-memory-case-reposit
 import {
   createAuditedRepositories,
   createRelationalAuthAuditSink,
+  createRelationalAuthorizationAuditSink,
   normalizeAuditMetadata,
 } from "../../src/index.js";
 
@@ -249,6 +250,80 @@ describe("audit utilities", () => {
           email: "apa@local.casemind.test",
           reason: "invalid_credentials",
         },
+      },
+    });
+  });
+
+  it("maps authorization audit events into relational audit writes", async () => {
+    const calls: Array<{ context: unknown; input: unknown }> = [];
+    const sink = createRelationalAuthorizationAuditSink({
+      relationalRepository: {
+        appendAuditLog(context, input) {
+          calls.push({ context, input });
+          return Promise.resolve({
+            id: "audit-authz-1",
+            tenantId: context.tenantId,
+            ...(input.actorUserId === undefined
+              ? {}
+              : { actorUserId: input.actorUserId }),
+            action: input.action,
+            outcome: input.outcome ?? "succeeded",
+            resourceType: input.resourceType,
+            ...(input.resourceId === undefined
+              ? {}
+              : { resourceId: input.resourceId }),
+            metadata: input.metadata ?? {},
+            ...(input.sourceIp === undefined
+              ? {}
+              : { sourceIp: input.sourceIp }),
+            ...(input.userAgent === undefined
+              ? {}
+              : { userAgent: input.userAgent }),
+            ...(input.deviceFingerprint === undefined
+              ? {}
+              : { deviceFingerprint: input.deviceFingerprint }),
+            ...(input.justification === undefined
+              ? {}
+              : { justification: input.justification }),
+            ...(input.requestId === undefined
+              ? {}
+              : { requestId: input.requestId }),
+            ...(input.correlationId === undefined
+              ? {}
+              : { correlationId: input.correlationId }),
+            occurredAt: input.occurredAt ?? "2026-03-12T12:00:00.000Z",
+            createdAt: "2026-03-12T12:00:00.000Z",
+          });
+        },
+      },
+    });
+
+    await sink.record({
+      tenantId: "tenant-local-demo",
+      actorUserId: "user-chief-1",
+      action: "break_glass",
+      outcome: "succeeded",
+      resourceType: "criminal_case",
+      resourceId: "case-77",
+      metadata: {
+        originalAction: "read",
+        sensitivityTag: "sensitive_case",
+      },
+      justification: "Emergency supervisory review before an after-hours hearing.",
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({
+      context: {
+        tenantId: "tenant-local-demo",
+        actorUserId: "user-chief-1",
+      },
+      input: {
+        action: "break_glass",
+        outcome: "succeeded",
+        resourceType: "criminal_case",
+        resourceId: "case-77",
+        justification: "Emergency supervisory review before an after-hours hearing.",
       },
     });
   });

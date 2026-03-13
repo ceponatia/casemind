@@ -51,26 +51,26 @@ describe("PostgreSQL row-level security", () => {
           ["tenant-a"],
         );
         await tenantAClient.query(
-          "INSERT INTO users (id, tenant_id, email, display_name, role, auth_provider) VALUES ($1, $2, $3, $4, $5, $6)",
+          "INSERT INTO users (id, tenant_id, email, display_name, role_ids, auth_provider) VALUES ($1, $2, $3, $4, $5::text[], $6)",
           [
             "user-a",
             "tenant-a",
             "tenant.a@casemind.local",
             "Tenant A User",
-            "office-admin",
+            ["office-admin"],
             "credentials",
           ],
         );
         await tenantAClient.query("SAVEPOINT before_cross_tenant_insert");
         await expect(
           tenantAClient.query(
-            "INSERT INTO users (id, tenant_id, email, display_name, role, auth_provider) VALUES ($1, $2, $3, $4, $5, $6)",
+            "INSERT INTO users (id, tenant_id, email, display_name, role_ids, auth_provider) VALUES ($1, $2, $3, $4, $5::text[], $6)",
             [
               "user-b",
               "tenant-b",
               "tenant.b@casemind.local",
               "Tenant B User",
-              "office-admin",
+              ["office-admin"],
               "credentials",
             ],
           ),

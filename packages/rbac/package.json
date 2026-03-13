@@ -1,0 +1,20 @@
+{
+    "name": "@casemind/rbac",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "devDependencies": {
+        "fast-check": "^4.0.1",
+        "vitest": "^3.0.8"
+    },
+    "scripts": {
+        "lint": "eslint src tests",
+        "typecheck": "tsc -p tsconfig.json",
+        "test": "vitest run --config vitest.config.ts tests/unit tests/contract",
+        "test:integration": "vitest run --config vitest.config.ts --dir tests/integration",
+        "test:mutate": "stryker run stryker.config.mjs"
+    }
+}
