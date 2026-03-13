@@ -38,20 +38,28 @@ model User {
 }
 
 model AuditLogEntry {
-  id          String   @id @db.Text
-  tenantId    String   @map("tenant_id") @db.Text
-  actorUserId String   @map("actor_user_id") @db.Text
-  action      String   @db.Text
-  entityType  String   @map("entity_type") @db.Text
-  entityId    String   @map("entity_id") @db.Text
-  detail      Json     @db.JsonB
-  sourceIp    String?  @map("source_ip") @db.Text
-  occurredAt  DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id                String   @db.Text
+  tenantId          String   @map("tenant_id") @db.Text
+  actorUserId       String?  @map("actor_user_id") @db.Text
+  action            String   @db.Text
+  outcome           String   @db.Text
+  resourceType      String   @map("resource_type") @db.Text
+  resourceId        String?  @map("resource_id") @db.Text
+  metadata          Json     @db.JsonB
+  sourceIp          String?  @map("source_ip") @db.Text
+  userAgent         String?  @map("user_agent") @db.Text
+  deviceFingerprint String?  @map("device_fingerprint") @db.Text
+  justification     String?  @db.Text
+  requestId         String?  @map("request_id") @db.Text
+  correlationId     String?  @map("correlation_id") @db.Text
+  occurredAt        DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([tenantId, occurredAt])
+  @@id([id, occurredAt])
+  @@index([tenantId, occurredAt(sort: Desc), id(sort: Desc)])
+  @@index([tenantId, resourceType, occurredAt(sort: Desc)])
+  @@index([tenantId, actorUserId, occurredAt(sort: Desc)])
   @@map("audit_log_entries")
 }
 

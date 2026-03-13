@@ -1,6 +1,8 @@
 import type {
   AiInteractionPlaceholder,
   AuditLogEntry,
+  AuditLogQuery,
+  AuditLogQueryResult,
   CalendarEvent,
   CaseStatusCount,
   CriminalCase,
@@ -127,6 +129,10 @@ export interface RelationalRepository {
     input: NewAuditLogEntry,
   ): Promise<AuditLogEntry>;
   listAuditLogEntries(context: RepositoryContext): Promise<AuditLogEntry[]>;
+  queryAuditLogEntries(
+    context: RepositoryContext,
+    query: AuditLogQuery,
+  ): Promise<AuditLogQueryResult>;
   createCalendarEvent(
     context: RepositoryContext,
     input: NewCalendarEvent,

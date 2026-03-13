@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  type AuthAuditEvent,
   AuthService,
   MemorySessionStore,
   createSyntheticLocalAccounts,
@@ -115,7 +116,7 @@ describe("AuthService", () => {
   });
 
   it("emits audit events for failed and successful authentication", async () => {
-    const recordedEvents: string[] = [];
+    const recordedEvents: AuthAuditEvent[] = [];
     const authService = new AuthService({
       sessionStore: new MemorySessionStore({
         inactivityTimeoutMinutes: 30,
@@ -126,7 +127,7 @@ describe("AuthService", () => {
       userDirectory: new InMemoryUserDirectory(createSyntheticLocalAccounts()),
       auditSink: {
         record(event) {
-          recordedEvents.push(event.type);
+          recordedEvents.push(event);
         },
       },
     });
@@ -140,8 +141,66 @@ describe("AuthService", () => {
       password: "CaseMindLocal!23",
     });
 
-    expect(recordedEvents).toContain("auth.login.failed");
-    expect(recordedEvents).toContain("auth.login.succeeded");
+    expect(recordedEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "auth.login.failed",
+          userId: "usr-apa",
+          tenantId: "tenant-local-demo",
+        }),
+        expect.objectContaining({
+          type: "auth.login.succeeded",
+          userId: "usr-apa",
+          tenantId: "tenant-local-demo",
+        }),
+      ]),
+    );
+  });
+
+  it("includes session context when invalidating a session", async () => {
+    const recordedEvents: AuthAuditEvent[] = [];
+    const authService = new AuthService({
+      sessionStore: new MemorySessionStore({
+        inactivityTimeoutMinutes: 30,
+        absoluteTimeoutHours: 12,
+        maxFailedAttempts: 5,
+        secureCookies: false,
+      }),
+      userDirectory: new InMemoryUserDirectory(createSyntheticLocalAccounts()),
+      auditSink: {
+        record(event) {
+          recordedEvents.push(event);
+        },
+      },
+    });
+
+    const loginResult = await authService.login({
+      email: "apa@local.casemind.test",
+      password: "CaseMindLocal!23",
+      ipAddress: "127.0.0.1",
+      userAgent: "Vitest",
+    });
+
+    expect(loginResult.status).toBe("success");
+
+    if (loginResult.status !== "success") {
+      return;
+    }
+
+    await authService.invalidateSession(loginResult.session.sessionToken);
+
+    expect(recordedEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "auth.session.invalidated",
+          userId: "usr-apa",
+          tenantId: "tenant-local-demo",
+          sessionId: loginResult.session.sessionId,
+          ipAddress: "127.0.0.1",
+          userAgent: "Vitest",
+        }),
+      ]),
+    );
   });
 
   it("rejects weak password updates", async () => {

@@ -83,10 +83,20 @@ export class AuthService {
     );
 
     if (primaryResult.status !== "success") {
+      const matchingAccount = this.#userDirectory.getAccountByEmail(
+        input.email,
+      );
+
       await this.#recordAuditEvent({
         type: "auth.login.failed",
         occurredAt: (input.now ?? new Date()).toISOString(),
         email: input.email.trim().toLowerCase(),
+        ...(matchingAccount === undefined
+          ? {}
+          : {
+              userId: matchingAccount.userId,
+              tenantId: matchingAccount.tenantId,
+            }),
         ...(input.ipAddress === undefined
           ? {}
           : { ipAddress: input.ipAddress }),
@@ -206,10 +216,24 @@ export class AuthService {
   }
 
   async invalidateSession(sessionToken: string): Promise<void> {
+    const session = await this.#sessionStore.getSession(sessionToken);
     await this.#sessionStore.invalidateSession(sessionToken);
     await this.#recordAuditEvent({
       type: "auth.session.invalidated",
       occurredAt: new Date().toISOString(),
+      ...(session === null
+        ? {}
+        : {
+            userId: session.userId,
+            tenantId: session.tenantId,
+            sessionId: session.sessionId,
+            ...(session.ipAddress === undefined
+              ? {}
+              : { ipAddress: session.ipAddress }),
+            ...(session.userAgent === undefined
+              ? {}
+              : { userAgent: session.userAgent }),
+          }),
       reason: "manual_invalidation",
     });
   }
@@ -298,11 +322,18 @@ export class AuthService {
   }
 
   resetLockout(userId: string): void {
+    const account = this.#userDirectory.getAccount(userId);
     this.#userDirectory.resetLockout(userId);
     void this.#recordAuditEvent({
       type: "auth.lockout.reset",
       occurredAt: new Date().toISOString(),
-      userId,
+      ...(account === undefined
+        ? { userId }
+        : {
+            userId: account.userId,
+            tenantId: account.tenantId,
+            email: account.email,
+          }),
     });
   }
 

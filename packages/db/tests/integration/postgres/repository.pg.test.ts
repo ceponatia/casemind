@@ -26,6 +26,12 @@ describe("Postgres relational repository", () => {
         instance.connectionString,
         appRole,
       );
+      const appPool = createPostgresPool(
+        buildApplicationRoleConnectionString(
+          instance.connectionString,
+          appRole,
+        ),
+      );
       const repository = new PostgresRelationalRepository(
         createPostgresPool(
           buildApplicationRoleConnectionString(
@@ -54,11 +60,23 @@ describe("Postgres relational repository", () => {
         });
         await repository.appendAuditLog(context, {
           actorUserId: user.id,
-          action: "case.view",
-          entityType: "case",
-          entityId: "criminal-100",
-          detail: {
+          action: "view",
+          outcome: "succeeded",
+          resourceType: "criminal_case",
+          resourceId: "criminal-100",
+          metadata: {
             reason: "integration-test",
+          },
+          userAgent: "vitest",
+        });
+        await repository.appendAuditLog(context, {
+          actorUserId: user.id,
+          action: "update",
+          outcome: "failed",
+          resourceType: "criminal_case",
+          resourceId: "criminal-100",
+          metadata: {
+            reason: "missing-record",
           },
         });
         await repository.createCalendarEvent(context, {
@@ -82,16 +100,64 @@ describe("Postgres relational repository", () => {
 
         const users = await repository.listUsers(context);
         const auditLogs = await repository.listAuditLogEntries(context);
+        const firstPage = await repository.queryAuditLogEntries(context, {
+          resourceType: "criminal_case",
+          limit: 1,
+        });
+        const secondPage = await repository.queryAuditLogEntries(context, {
+          resourceType: "criminal_case",
+          limit: 1,
+          ...(firstPage.nextCursor === undefined
+            ? {}
+            : { cursor: firstPage.nextCursor }),
+        });
         const notifications = await repository.listNotifications(context);
         const aiInteractions =
           await repository.listAiInteractionPlaceholders(context);
 
         expect(users).toHaveLength(1);
-        expect(auditLogs).toHaveLength(1);
+        expect(auditLogs).toHaveLength(2);
+        expect(firstPage.entries).toHaveLength(1);
+        expect(firstPage.nextCursor).toBeDefined();
+        expect(secondPage.entries).toHaveLength(1);
         expect(notifications).toHaveLength(1);
         expect(aiInteractions).toHaveLength(1);
+
+        const auditClient = await appPool.connect();
+
+        try {
+          await auditClient.query("BEGIN");
+          await auditClient.query(
+            "SELECT set_config('app.current_tenant_id', $1, true)",
+            [context.tenantId],
+          );
+          await auditClient.query(
+            "SELECT set_config('app.current_actor_user_id', $1, true)",
+            [context.actorUserId],
+          );
+          await auditClient.query("SAVEPOINT before_audit_update");
+          await expect(
+            auditClient.query(
+              "UPDATE audit_log_entries SET justification = $1 WHERE tenant_id = $2",
+              ["should-fail", context.tenantId],
+            ),
+          ).rejects.toThrow(/append-only|permission/i);
+          await auditClient.query("ROLLBACK TO SAVEPOINT before_audit_update");
+          await auditClient.query("SAVEPOINT before_audit_delete");
+          await expect(
+            auditClient.query(
+              "DELETE FROM audit_log_entries WHERE tenant_id = $1",
+              [context.tenantId],
+            ),
+          ).rejects.toThrow(/append-only|permission/i);
+          await auditClient.query("ROLLBACK TO SAVEPOINT before_audit_delete");
+          await auditClient.query("ROLLBACK");
+        } finally {
+          auditClient.release();
+        }
       } finally {
         await repository.close();
+        await appPool.end();
       }
     } finally {
       await instance.stop();

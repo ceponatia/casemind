@@ -119,6 +119,12 @@ export class InMemoryUserDirectory {
     };
   }
 
+  getAccountByEmail(email: string): LocalUserAccount | undefined {
+    const userId = this.#userIdByEmail.get(normalizeEmail(email));
+
+    return userId === undefined ? undefined : this.getAccount(userId);
+  }
+
   createUser(input: CreateLocalUserInput): AuthenticatedUser {
     const account = createLocalUserAccount(input);
     this.#insertAccount(account);
