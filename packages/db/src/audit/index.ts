@@ -539,7 +539,10 @@ export function createRelationalAuthAuditSink(
             AUTH_SERVICE_ACTOR_USER_ID,
         },
         {
-          ...optionalStringProperty("actorUserId", event.userId),
+          actorUserId:
+            event.userId ??
+            options.serviceActorUserId ??
+            AUTH_SERVICE_ACTOR_USER_ID,
           action: mapped.action,
           outcome: mapped.outcome,
           resourceType: mapped.resourceType,

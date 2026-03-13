@@ -240,6 +240,7 @@ describe("audit utilities", () => {
         actorUserId: "system:auth-service",
       },
       input: {
+        actorUserId: "system:auth-service",
         action: "login",
         outcome: "failed",
         resourceType: "auth_credentials",
